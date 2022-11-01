@@ -6,7 +6,7 @@ from typing import TextIO
 Leaflet = tuple[int, int, int]  # (num_folleto, anchura, altura)
 LeafletPos = tuple[int, int, int, int]  # (num_folleto, num_hoja_de_imprenta, pos_x ,pos_y)
 lista_cajitas = []  # Lista con las cajitas disponibles
-lista_posiciones = []
+lista_posiciones = []  # Lista con las posiciones finales.
 numero_hoja: int = 0
 
 
@@ -19,8 +19,7 @@ def read_data(f: TextIO) -> tuple[int, list[Leaflet]]:
         leaf = linea.split(" ")
         folleto = (int(leaf[0]), int(leaf[1]), int(leaf[2]))
         l_uleaflets.append(folleto)
-    print("size vale: ",size)
-    print("La lista vale: ", l_uleaflets)
+
     return size, l_uleaflets
 
 
@@ -28,7 +27,11 @@ def read_data(f: TextIO) -> tuple[int, list[Leaflet]]:
 
 # Método que dice si un folleto cabe o no dentro de un caja.
 def cabe(folleto: tuple[int, int, int], caja: tuple[int, int, int, int, int]) -> bool:
-    if (folleto[1], folleto[2]) <= (caja[2] - caja[1], caja[4] - caja[3]):  # veo si cabe dento de la caja ese folleto.
+    if folleto[1] <= (caja[2] - caja[1]) and folleto[2] <= (caja[4] - caja[3]):  # veo si cabe dento de la caja ese folleto.
+        print(folleto[1])
+        print(folleto[2])
+        print(caja[2] - caja[1])
+        print(caja[4] - caja[3])
         return True
     return False
 
@@ -46,21 +49,28 @@ def add_create_hijas(cajita: tuple[int, int, int, int, int], folleto: tuple[int,
     # Creo las nuevas cajitas
     # CA = Caja Arriba, CD = Caja derecha.
     # CA = (nfoliopadre, inicioHorizontalPadre, finHorizontalPadre - HorizontalFolleto, inicioVerticalPadre + VerticalFolleto,finVerticalPadre)
-    CA = (cajita[0], cajita[1], cajita[2] - folleto[1], cajita[3] + folleto[2], cajita[4])
+    CA = (cajita[0], cajita[1], folleto[1], cajita[3] + folleto[2], cajita[4])
 
     # CD = (nfoliopadre, horizontalFolleto + horizontalPadre, finHorizontalPadre, inicioVerticalPadre, finVerticalPadre)
     CD = (cajita[0], folleto[1] + cajita[1], cajita[2], cajita[3], cajita[4])
 
     lista_cajitas.append(CA)
     lista_cajitas.append(CD)
-    # lista_cajitas.remove(cajita) # Esta caja ya no existe, solo quedan los hijos por lo que
+    # if CA < (0,0,0,0,0) == False:
+    #     pass
+    #
+    # if CD < (0,0,0,0,0) == False:
+    #     pass
+    lista_cajitas.remove(cajita) # Esta caja ya no existe, solo quedan los hijos por lo que
+    print("listaCajitas",lista_cajitas)
+    print("--------------")
 
 
 def add_create_folios(folleto, numero_hoja: int, size: int) -> int:
     numero_hoja = numero_hoja + 1
-    cajitaNueva = (numero_hoja, 0, numero_hoja, size, numero_hoja)
-    add_create_hijas(cajitaNueva, folleto)
-    print("se tuvo que crear nuevos folios")
+    cajitaNueva = (numero_hoja, 0, size, 0, size)
+    lista_cajitas.append(cajitaNueva)
+    #print("se tuvo que crear nuevos folios")
     return numero_hoja
 
 
@@ -71,31 +81,35 @@ def process(paper_size: int, leaflet_list: list[Leaflet]) -> list[LeafletPos]:
     numero_hoja = 1
     cajita_inicial = (numero_hoja, 0, paper_size, 0, paper_size)  # nHoja inicioAnchura finAnchura inicioAlt finalAlt
     lista_cajitas.append(cajita_inicial)
-
+    print(sorted_index)
 
 
 
     for index in sorted_index:
         folleto = leaflet_list[index]
         # Ahora que tengo el folleto, tengo que restar el espacio disponible y crear los conjuntos disponibles
-
-        for caja in range(len(lista_cajitas)):
-            print("caja: ",lista_cajitas[caja])
+        lista_sorted_cajita = sorted(range(len(lista_cajitas)), key=lambda i: lista_cajitas[i][2]-lista_cajitas[i][1])
+        print("cambio")
+        cupo = False
+        for caja in lista_sorted_cajita:
+            print("miro en: ",lista_cajitas[caja] , folleto)
             if cabe(folleto, lista_cajitas[caja]):  # cabe en alguna cajita
+                print("si entra", folleto)
                 add_create_hijas(lista_cajitas[caja], folleto)
+                cupo = True
 
-            else:
-                add_create_folios(folleto, numero_hoja, paper_size)
-                print("se ha creado cajita")
+        if cupo == False:
+            add_create_folios(folleto, numero_hoja, paper_size)
+        # print("se ha creado cajita")
 
     return lista_posiciones
 
 
 # Muestra por la salida estándar las posiciones de los folletos (ver apartado 1.2)
 def show_results(leafletpos_list: list[int, int, int, int]):
-    print("Aqui ha llegado")
     for folleto in leafletpos_list:
         print(folleto)
+        continue
 
 
 if __name__ == '__main__':
